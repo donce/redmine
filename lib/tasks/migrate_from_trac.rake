@@ -18,6 +18,7 @@
 require 'active_record'
 require 'iconv' if RUBY_VERSION < '1.9'
 require 'pp'
+require 'digest/sha1'
 
 namespace :redmine do
   desc 'Trac migration script'
@@ -151,14 +152,15 @@ namespace :redmine do
         end
 
       private
+        _attachment_re = /\.[A-Za-z0-9]+\z/
         def trac_fullpath
           attachment_type = read_attribute(:type)
-          #replace exotic characters with their hex representation to avoid invalid filenames
-          trac_file = filename.gsub( /[^a-zA-Z0-9\-_\.!~*']/n ) do |x|
-            codepoint = RUBY_VERSION < '1.9' ? x[0] : x.codepoints.to_a[0]
-            sprintf('%%%02x', codepoint)
-          end
-          "#{TracMigrate.trac_attachments_directory}/#{attachment_type}/#{id}/#{trac_file}"
+          id = read_attribute(:id)
+          id_hash = Digest::SHA1.hexdigest id
+          name_hash = Digest::SHA1.hexdigest filename
+          m = _attachment_re.match(filename)
+          ext = m ? m[0] : ''
+          "#{TracMigrate.trac_attachments_directory}/#{attachment_type}/#{id_hash[0..2]}/#{id_hash}/#{name_hash}#{ext}"
         end
       end
 
@@ -665,7 +667,7 @@ namespace :redmine do
       mattr_reader :trac_directory, :trac_adapter, :trac_db_host, :trac_db_port, :trac_db_name, :trac_db_schema, :trac_db_username, :trac_db_password
 
       def self.trac_db_path; "#{trac_directory}/db/trac.db" end
-      def self.trac_attachments_directory; "#{trac_directory}/attachments" end
+      def self.trac_attachments_directory; "#{trac_directory}/files/attachments" end
 
       def self.target_project_identifier(identifier)
         project = Project.find_by_identifier(identifier)
