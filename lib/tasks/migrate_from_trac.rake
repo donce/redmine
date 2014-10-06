@@ -152,12 +152,12 @@ namespace :redmine do
         end
 
       private
-        _attachment_re = /\.[A-Za-z0-9]+\z/
         def trac_fullpath
           attachment_type = read_attribute(:type)
           id = read_attribute(:id)
           id_hash = Digest::SHA1.hexdigest id
           name_hash = Digest::SHA1.hexdigest filename
+          _attachment_re = /\.[A-Za-z0-9]+\z/
           m = _attachment_re.match(filename)
           ext = m ? m[0] : ''
           "#{TracMigrate.trac_attachments_directory}/#{attachment_type}/#{id_hash[0..2]}/#{id_hash}/#{name_hash}#{ext}"
