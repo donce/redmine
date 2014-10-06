@@ -31,11 +31,13 @@ namespace :redmine do
         assigned_status = IssueStatus.find_by_position(2)
         resolved_status = IssueStatus.find_by_position(3)
         feedback_status = IssueStatus.find_by_position(4)
+        needsinfo_status = IssueStatus.find_by_position(7)
         closed_status = IssueStatus.where(:is_closed => true).first
         STATUS_MAPPING = {'new' => DEFAULT_STATUS,
                           'reopened' => feedback_status,
                           'assigned' => assigned_status,
-                          'closed' => closed_status
+                          'closed' => closed_status,
+                          'needsinfo' => needsinfo_status
                           }
 
         priorities = IssuePriority.all
