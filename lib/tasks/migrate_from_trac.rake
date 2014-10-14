@@ -522,6 +522,13 @@ namespace :redmine do
               n.save unless n.details.empty? && n.notes.blank?
           end
 
+          # Add import comment
+          n = Journal.new :notes => "Imported from Trac ticket \##{ticket.id}",
+                          :time => Time.new
+          n.user = User.first
+          n.journalized = i
+          n.save
+
           # Attachments
           ticket.attachments.each do |attachment|
             next unless attachment.exist?
