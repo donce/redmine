@@ -32,13 +32,12 @@ namespace :redmine do
         resolved_status = IssueStatus.find_by_position(3)
         feedback_status = IssueStatus.find_by_position(4)
         REJECTED_STATUS = IssueStatus.find_by_position(6)
-        needsinfo_status = IssueStatus.find_by_position(7)
         closed_status = IssueStatus.where(:is_closed => true).first
         STATUS_MAPPING = {'new' => DEFAULT_STATUS,
                           'reopened' => feedback_status,
                           'assigned' => assigned_status,
                           'closed' => closed_status,
-                          'needsinfo' => needsinfo_status
+                          'needsinfo' => DEFAULT_STATUS
                           }
 
         priorities = IssuePriority.all
