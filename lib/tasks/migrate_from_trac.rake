@@ -31,6 +31,7 @@ namespace :redmine do
         assigned_status = IssueStatus.find_by_position(2)
         resolved_status = IssueStatus.find_by_position(3)
         feedback_status = IssueStatus.find_by_position(4)
+        REJECTED_STATUS = IssueStatus.find_by_position(6)
         needsinfo_status = IssueStatus.find_by_position(7)
         closed_status = IssueStatus.where(:is_closed => true).first
         STATUS_MAPPING = {'new' => DEFAULT_STATUS,
@@ -375,6 +376,17 @@ namespace :redmine do
         text
       end
 
+      def self.get_status(status, resolution=nil, set_default=true)
+          if status == 'closed' && !resolution.nil? && resolution != 'fixed'
+            return REJECTED_STATUS
+          end
+          if set_default
+            return STATUS_MAPPING[status] || DEFAULT_STATUS
+          else
+            return STATUS_MAPPING[status]
+          end
+      end
+
       def self.migrate
         establish_connection
 
@@ -481,7 +493,7 @@ namespace :redmine do
           i.author = find_or_create_user(ticket.reporter)
           i.category = issues_category_map[ticket.component] unless ticket.component.blank?
           i.fixed_version = version_map[ticket.milestone] unless ticket.milestone.blank?
-          i.status = STATUS_MAPPING[ticket.status] || DEFAULT_STATUS
+          i.status = get_status(ticket.status, ticket.resolution)
           i.tracker = TRACKER_MAPPING[ticket.ticket_type] || DEFAULT_TRACKER
           i.id = ticket.id unless Issue.exists?(ticket.id)
           next unless Time.fake(ticket.changetime) { i.save }
@@ -504,14 +516,20 @@ namespace :redmine do
                               :created_on => time
               n.user = find_or_create_user(changeset.first.author)
               n.journalized = i
-              if status_change &&
-                   STATUS_MAPPING[status_change.oldvalue] &&
-                   STATUS_MAPPING[status_change.newvalue] &&
-                   (STATUS_MAPPING[status_change.oldvalue] != STATUS_MAPPING[status_change.newvalue])
+              if status_change
+                if resolution_change
+                  from = get_status(status_change.oldvalue, resolution_change.oldvalue, false)
+                  to = get_status(status_change.newvalue, resolution_change.newvalue, false)
+                else
+                  from = get_status(status_change.oldvalue, nil, false)
+                  to = get_status(status_change.newvalue, nil, false)
+                end
+              end
+              if status_change && from && to && (from != to)
                 n.details << JournalDetail.new(:property => 'attr',
                                                :prop_key => 'status_id',
-                                               :old_value => STATUS_MAPPING[status_change.oldvalue].id,
-                                               :value => STATUS_MAPPING[status_change.newvalue].id)
+                                               :old_value => from.id,
+                                               :value => to.id)
               end
               if resolution_change
                 n.details << JournalDetail.new(:property => 'cf',
@@ -524,7 +542,7 @@ namespace :redmine do
 
           # Add import comment
           n = Journal.new :notes => "Imported from Trac ticket \##{ticket.id}",
-                          :time => Time.new
+                          :created_on => Time.new
           n.user = User.first
           n.journalized = i
           n.save
