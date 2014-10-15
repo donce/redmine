@@ -469,17 +469,6 @@ namespace :redmine do
         end
         puts
 
-        # Trac 'resolution' field as a Redmine custom field
-        r = IssueCustomField.where(:name => "Resolution").first
-        r = IssueCustomField.new(:name => 'Resolution',
-                                 :field_format => 'list',
-                                 :is_filter => true) if r.nil?
-        r.trackers = Tracker.all
-        r.projects << @target_project
-        r.possible_values = (r.possible_values + %w(fixed invalid wontfix duplicate worksforme)).flatten.compact.uniq
-        r.save!
-        custom_field_map['resolution'] = r
-
         # Tickets
         print "Migrating tickets"
           TracTicket.find_each(:batch_size => 200) do |ticket|
@@ -531,12 +520,6 @@ namespace :redmine do
                                                :old_value => from.id,
                                                :value => to.id)
               end
-              if resolution_change
-                n.details << JournalDetail.new(:property => 'cf',
-                                               :prop_key => custom_field_map['resolution'].id,
-                                               :old_value => resolution_change.oldvalue,
-                                               :value => resolution_change.newvalue)
-              end
               n.save unless n.details.empty? && n.notes.blank?
           end
 
@@ -567,9 +550,6 @@ namespace :redmine do
               migrated_custom_values += 1
             end
             h
-          end
-          if custom_field_map['resolution'] && !ticket.resolution.blank?
-            custom_values[custom_field_map['resolution'].id] = ticket.resolution
           end
           i.custom_field_values = custom_values
           i.save_custom_field_values
